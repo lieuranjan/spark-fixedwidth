@@ -1,14 +1,9 @@
 # spark-positional
-Saprk relation for positional file parsing
+Spark relation for positional file parsing
 
-- features:
-- It will be based on Spark fixedWidth parser having capabilities to parse fixed width columns and extra facilities
-- Allow missing fields
-- extract data if even lesser byte position.
+Note: Most of the code are copied from Spark CSV parser 
 
-Note: Most of the code are copied from spark FixedWidth parser 
-
-##### You can set the following fixedwidth-specific options to deal with fixedwidth files:
+## Features
 
 * `encoding` (default UTF-8): decodes the data files by the given encoding type.
 * `quote` (default "): sets a single character used for escaping quoted values where the separator can be part of the value. If you would like to turn off quotations, you need to set not null but an empty string. 
@@ -36,7 +31,7 @@ Note: Most of the code are copied from spark FixedWidth parser
 * * `DROPMALFORMED` : ignores the whole corrupted records.
 * * `FAILFAST` : throws an exception when it meets corrupted records.
 * `columnNameOfCorruptRecord` (default is the value specified in spark.sql.columnNameOfCorruptRecord): allows renaming the new field having malformed string created by PERMISSIVE mode. This overrides spark.sql.columnNameOfCorruptRecord.
-
+* `padding` (default ' ' i.e \u0000) White space is default padding character
 * `fieldLengths` : comma separated lengths of each fields to parse or output file
 * `fieldSchema` : Json Array with field details as 
 
