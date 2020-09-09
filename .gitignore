@@ -1,1 +1,6 @@
 /.idea/
+*.class
+*.properties
+*.lst
+*.jar
+target/analysis/compile

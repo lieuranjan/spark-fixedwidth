@@ -39,7 +39,7 @@ public class FixedWidthParserTest {
                 .option("header",true)
                 .option("ignoreLeadingWhiteSpaceInRead",true)
                 .option("ignoreTrailingWhiteSpaceInRead",true)
-                .load("/Users/lieuranjan/apps/github/data-tools/src/main/resources/fixed_width.dat");
+                .load("data/input/fixed_width.dat");
         input.show();
 
         input.write()
