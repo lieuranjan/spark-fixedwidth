@@ -1,4 +1,4 @@
-package in.gogoi.ds.fixedwidth;
+package in.gogoi.spark.ds.fixedwidth;
 
 import com.univocity.parsers.fixed.FieldAlignment;
 import com.univocity.parsers.fixed.FixedWidthFields;
