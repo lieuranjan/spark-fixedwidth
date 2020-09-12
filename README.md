@@ -1,7 +1,7 @@
-# spark-positional
-Spark relation for positional file parsing
+# spark-fixedwidth
+Spark relation for positional/fixedwidth file parsing
 
-Note: Most of the code are copied from Spark CSV parser 
+Note: Most of the codes are copied from Spark CSV parser 
 
 ## Features
 
