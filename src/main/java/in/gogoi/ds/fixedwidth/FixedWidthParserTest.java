@@ -33,7 +33,7 @@ public class FixedWidthParserTest {
         SparkSession sparkSession = SparkSession.builder().appName("Test").master("local").getOrCreate();
         Dataset<Row> input=sparkSession
                 .read()
-                .format("in.gogoi.ds.fixedwidth.FixedWidthFileFormat")
+                .format("org.apache.spark.sql.fixedwidth.FixedWidthFileFormat")
                 //.option("padding"," ")
                 .option("fieldLengths",lengths)
                 .option("header",true)

@@ -15,22 +15,27 @@
  * limitations under the License.
  */
 
-package in.gogoi.ds.fixedwidth
+package org.apache.spark.sql.fixedwidth
 
+import java.net.URI
 import java.nio.charset.{Charset, StandardCharsets}
 
 import com.univocity.parsers.fixed.FixedWidthParser
-import in.gogoi.ds.fixedwidth.univocity.UnivocityParser
-import in.gogoi.ds.fixedwidth.util.{FixedWidthInferSchema, FixedWidthUtils}
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileStatus
+import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.io.{LongWritable, Text}
 import org.apache.hadoop.mapred.TextInputFormat
+import org.apache.hadoop.mapreduce.Job
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 import org.apache.spark.TaskContext
+import org.apache.spark.input.{PortableDataStream, StreamInputFormat}
 import org.apache.spark.internal.Logging
+import org.apache.spark.rdd.{BinaryFileRDD, RDD}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.execution.datasources.text.TextFileFormat
+import org.apache.spark.sql.fixedwidth.univocity.UnivocityParser
+import org.apache.spark.sql.fixedwidth.utils.{FixedWidthInferSchema, FixedWidthUtils}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Dataset, Encoders, SparkSession}
 
@@ -44,22 +49,22 @@ abstract class FixedWidthDataSource extends Serializable {
    * Parse a [[PartitionedFile]] into [[InternalRow]] instances.
    */
   def readFile(
-      conf: Configuration,
-      file: PartitionedFile,
-      parser: UnivocityParser,
-      requiredSchema: StructType,
-      // Actual schema of data in the fixedWidth file
-      dataSchema: StructType,
-      caseSensitive: Boolean,
-      columnPruning: Boolean): Iterator[InternalRow]
+                conf: Configuration,
+                file: PartitionedFile,
+                parser: UnivocityParser,
+                requiredSchema: StructType,
+                // Actual schema of data in the fixedWidth file
+                dataSchema: StructType,
+                caseSensitive: Boolean,
+                columnPruning: Boolean): Iterator[InternalRow]
 
   /**
    * Infers the schema from `inputPaths` files.
    */
   final def inferSchema(
-      sparkSession: SparkSession,
-      inputPaths: Seq[FileStatus],
-      parsedOptions: FixedWidthOptions): Option[StructType] = {
+                         sparkSession: SparkSession,
+                         inputPaths: Seq[FileStatus],
+                         parsedOptions: FixedWidthOptions): Option[StructType] = {
     if (inputPaths.nonEmpty) {
       Some(infer(sparkSession, inputPaths, parsedOptions))
     } else {
@@ -68,17 +73,17 @@ abstract class FixedWidthDataSource extends Serializable {
   }
 
   protected def infer(
-      sparkSession: SparkSession,
-      inputPaths: Seq[FileStatus],
-      parsedOptions: FixedWidthOptions): StructType
+                       sparkSession: SparkSession,
+                       inputPaths: Seq[FileStatus],
+                       parsedOptions: FixedWidthOptions): StructType
 
   /**
    * Generates a header from the given row which is null-safe and duplicate-safe.
    */
   protected def makeSafeHeader(
-      row: Array[String],
-      caseSensitive: Boolean,
-      options: FixedWidthOptions): Array[String] = {
+                                row: Array[String],
+                                caseSensitive: Boolean,
+                                options: FixedWidthOptions): Array[String] = {
     if (options.headerFlag) {
       val duplicates = {
         val headerNames = row.filter(_ != null)
@@ -113,11 +118,11 @@ abstract class FixedWidthDataSource extends Serializable {
 
 object FixedWidthDataSource extends Logging {
   def apply(options: FixedWidthOptions): FixedWidthDataSource = {
-    /*if (options.multiLine) {
+    if (options.multiLine) {
       MultiLineFixedWidthDataSource
     } else {
       TextInputFixedWidthDataSource
-    }*/
+    }
     TextInputFixedWidthDataSource
   }
 
@@ -125,21 +130,21 @@ object FixedWidthDataSource extends Logging {
    * Checks that column names in a Txt header and field names in the schema are the same
    * by taking into account case sensitivity.
    *
-   * @param schema - provided (or inferred) schema to which Txt must conform.
-   * @param columnNames - names of Txt columns that must be checked against to the schema.
-   * @param fileName - name of Txt file that are currently checked. It is used in error messages.
+   * @param schema        - provided (or inferred) schema to which Txt must conform.
+   * @param columnNames   - names of Txt columns that must be checked against to the schema.
+   * @param fileName      - name of Txt file that are currently checked. It is used in error messages.
    * @param enforceSchema - if it is `true`, column names are ignored otherwise the Txt column
-   *                        names are checked for conformance to the schema. In the case if
-   *                        the column name don't conform to the schema, an exception is thrown.
+   *                      names are checked for conformance to the schema. In the case if
+   *                      the column name don't conform to the schema, an exception is thrown.
    * @param caseSensitive - if it is set to `false`, comparison of column names and schema field
-   *                        names is not case sensitive.
+   *                      names is not case sensitive.
    */
   def checkHeaderColumnNames(
-      schema: StructType,
-      columnNames: Array[String],
-      fileName: String,
-      enforceSchema: Boolean,
-      caseSensitive: Boolean): Unit = {
+                              schema: StructType,
+                              columnNames: Array[String],
+                              fileName: String,
+                              enforceSchema: Boolean,
+                              caseSensitive: Boolean): Unit = {
     if (columnNames != null) {
       val fieldNames = schema.map(_.name).toIndexedSeq
       val (headerLen, schemaSize) = (columnNames.size, fieldNames.length)
@@ -185,13 +190,13 @@ object TextInputFixedWidthDataSource extends FixedWidthDataSource {
   override val isSplitable: Boolean = true
 
   override def readFile(
-      conf: Configuration,
-      file: PartitionedFile,
-      parser: UnivocityParser,
-      requiredSchema: StructType,
-      dataSchema: StructType,
-      caseSensitive: Boolean,
-      columnPruning: Boolean): Iterator[InternalRow] = {
+                         conf: Configuration,
+                         file: PartitionedFile,
+                         parser: UnivocityParser,
+                         requiredSchema: StructType,
+                         dataSchema: StructType,
+                         caseSensitive: Boolean,
+                         columnPruning: Boolean): Iterator[InternalRow] = {
     val lines = {
       val linesReader = new HadoopFileLinesReader(file, conf)
       Option(TaskContext.get()).foreach(_.addTaskCompletionListener[Unit](_ => linesReader.close()))
@@ -226,9 +231,9 @@ object TextInputFixedWidthDataSource extends FixedWidthDataSource {
   }
 
   override def infer(
-      sparkSession: SparkSession,
-      inputPaths: Seq[FileStatus],
-      parsedOptions: FixedWidthOptions): StructType = {
+                      sparkSession: SparkSession,
+                      inputPaths: Seq[FileStatus],
+                      parsedOptions: FixedWidthOptions): StructType = {
     val ds = createBaseDataset(sparkSession, inputPaths, parsedOptions)
     val maybeFirstLine = FixedWidthUtils.filterCommentAndEmpty(ds, parsedOptions).take(1).headOption
     inferFromDataset(sparkSession, ds, maybeFirstLine, parsedOptions)
@@ -263,9 +268,9 @@ object TextInputFixedWidthDataSource extends FixedWidthDataSource {
   }
 
   private def createBaseDataset(
-      sparkSession: SparkSession,
-      inputPaths: Seq[FileStatus],
-      options: FixedWidthOptions): Dataset[String] = {
+                                 sparkSession: SparkSession,
+                                 inputPaths: Seq[FileStatus],
+                                 options: FixedWidthOptions): Dataset[String] = {
     val paths = inputPaths.map(_.getPath.toString)
     if (Charset.forName(options.charset) == StandardCharsets.UTF_8) {
       sparkSession.baseRelationToDataFrame(
@@ -284,18 +289,19 @@ object TextInputFixedWidthDataSource extends FixedWidthDataSource {
       sparkSession.createDataset(rdd)(Encoders.STRING)
     }
   }
+}
 
-/*object MultiLineFixedWidthDataSource extends FixedWidthDataSource {
+object MultiLineFixedWidthDataSource extends FixedWidthDataSource {
   override val isSplitable: Boolean = false
 
   override def readFile(
-      conf: Configuration,
-      file: PartitionedFile,
-      parser: UnivocityParser,
-      requiredSchema: StructType,
-      dataSchema: StructType,
-      caseSensitive: Boolean,
-      columnPruning: Boolean): Iterator[InternalRow] = {
+                         conf: Configuration,
+                         file: PartitionedFile,
+                         parser: UnivocityParser,
+                         requiredSchema: StructType,
+                         dataSchema: StructType,
+                         caseSensitive: Boolean,
+                         columnPruning: Boolean): Iterator[InternalRow] = {
     def checkHeader(header: Array[String]): Unit = {
       val actualRequiredSchema =
         StructType(requiredSchema.filterNot(_.name == parser.options.columnNameOfCorruptRecord))
@@ -319,9 +325,9 @@ object TextInputFixedWidthDataSource extends FixedWidthDataSource {
   }
 
   override def infer(
-      sparkSession: SparkSession,
-      inputPaths: Seq[FileStatus],
-      parsedOptions: FixedWidthOptions): StructType = {
+                      sparkSession: SparkSession,
+                      inputPaths: Seq[FileStatus],
+                      parsedOptions: FixedWidthOptions): StructType = {
     val fixedWidth = createBaseRdd(sparkSession, inputPaths, parsedOptions)
     fixedWidth.flatMap { lines =>
       val path = new Path(lines.getPath())
@@ -350,9 +356,9 @@ object TextInputFixedWidthDataSource extends FixedWidthDataSource {
   }
 
   private def createBaseRdd(
-      sparkSession: SparkSession,
-      inputPaths: Seq[FileStatus],
-      options: FixedWidthOptions): RDD[PortableDataStream] = {
+                             sparkSession: SparkSession,
+                             inputPaths: Seq[FileStatus],
+                             options: FixedWidthOptions): RDD[PortableDataStream] = {
     val paths = inputPaths.map(_.getPath)
     val name = paths.mkString(",")
     val job = Job.getInstance(sparkSession.sessionState.newHadoopConfWithOptions(
@@ -370,5 +376,5 @@ object TextInputFixedWidthDataSource extends FixedWidthDataSource {
 
     // Only returns `PortableDataStream`s without paths.
     rdd.setName(s"fixedWidthFile: $name").values
-  }*/
+  }
 }

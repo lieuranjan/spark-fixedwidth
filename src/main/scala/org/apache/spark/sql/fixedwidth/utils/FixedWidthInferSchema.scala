@@ -1,11 +1,13 @@
-package in.gogoi.ds.fixedwidth.util
+package org.apache.spark.sql.fixedwidth.utils
 
 import java.math.BigDecimal
-import in.gogoi.ds.fixedwidth.FixedWidthOptions
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.TypeCoercion
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.fixedwidth.FixedWidthOptions
 import org.apache.spark.sql.types._
+
 import scala.util.control.Exception.allCatch
 
 private[fixedwidth] object FixedWidthInferSchema {
@@ -148,13 +150,13 @@ private[fixedwidth] object FixedWidthInferSchema {
     StringType
   }
 
-  //private val numericPrecedence: IndexedSeq[DataType] = TypeCoercion.numericPrecedence
+  private val numericPrecedence: IndexedSeq[DataType] = TypeCoercion.numericPrecedence
 
   /**
    * Copied from internal Spark api
    * [[org.apache.spark.sql.catalyst.analysis.TypeCoercion]]
    */
-  /*val findTightestCommonType: (DataType, DataType) => Option[DataType] = {
+  val findTightestCommonType: (DataType, DataType) => Option[DataType] = {
     case (t1, t2) if t1 == t2 => Some(t1)
     case (NullType, t1) => Some(t1)
     case (t1, NullType) => Some(t1)
@@ -194,5 +196,5 @@ private[fixedwidth] object FixedWidthInferSchema {
       }
 
     case _ => None
-  }*/
+  }
 }

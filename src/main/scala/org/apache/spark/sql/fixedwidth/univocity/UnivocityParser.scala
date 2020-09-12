@@ -1,17 +1,17 @@
-package in.gogoi.ds.fixedwidth.univocity
+package org.apache.spark.sql.fixedwidth.univocity
 
 import java.io.InputStream
 import java.math.BigDecimal
 
 import com.univocity.parsers.fixed.FixedWidthParser
-import in.gogoi.ds.fixedwidth.FixedWidthOptions
-import in.gogoi.ds.fixedwidth.util.FixedWidthUtils
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.TimestampParser
 import org.apache.spark.sql.catalyst.util.{BadRecordException, DateTimeUtils}
 import org.apache.spark.sql.execution.datasources.FailureSafeParser
+import org.apache.spark.sql.fixedwidth.FixedWidthOptions
+import org.apache.spark.sql.fixedwidth.utils.FixedWidthUtils
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -144,9 +144,9 @@ class UnivocityParser(
 
     case _: StringType => (d: String) =>
       nullSafeDatum(d, name, nullable, options)(UTF8String.fromString)
-    //TODO User Defined Types are not supported
-    /*case udt: UserDefinedType[_] => (datum: String) =>
-      makeConverter(name, udt.sqlType, nullable, options)*/
+
+    case udt: UserDefinedType[_] => (datum: String) =>
+      makeConverter(name, udt.sqlType, nullable, options)
 
     // We don't actually hit this exception though, we keep it for understandability
     case _ => throw new RuntimeException(s"Unsupported type: ${dataType.typeName}")

@@ -15,21 +15,21 @@
  * limitations under the License.
  */
 
-package in.gogoi.ds.fixedwidth.univocity
+package org.apache.spark.sql.fixedwidth.univocity
 
 import java.io.Writer
 
 import com.univocity.parsers.fixed.FixedWidthWriter
-import in.gogoi.ds.fixedwidth.FixedWidthOptions
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.TimestampParser
+import org.apache.spark.sql.fixedwidth.FixedWidthOptions
 import org.apache.spark.sql.types._
 
 private[fixedwidth] class UnivocityWriter(
-    schema: StructType,
-    writer: Writer,
-    options: FixedWidthOptions) {
+                                           schema: StructType,
+                                           writer: Writer,
+                                           options: FixedWidthOptions) {
   private val writerSettings = options.asWriterSettings
   writerSettings.setHeaders(schema.fieldNames: _*)
   private val gen = new FixedWidthWriter(writer, writerSettings)
@@ -52,7 +52,7 @@ private[fixedwidth] class UnivocityWriter(
 
     case TimestampType =>
       (row: InternalRow, ordinal: Int) => timestampParser.format(row.getLong(ordinal))
-   //TODO UserDefinedType not supported
+    //TODO UserDefinedType not supported
     //case udt: UserDefinedType[_] => makeConverter(udt.sqlType)
 
     case dt: DataType =>

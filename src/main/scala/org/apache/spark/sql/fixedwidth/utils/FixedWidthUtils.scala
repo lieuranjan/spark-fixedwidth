@@ -1,19 +1,16 @@
-package in.gogoi.ds.fixedwidth.util
+package org.apache.spark.sql.fixedwidth.utils
 
-import java.io.IOException
-
-import in.gogoi.ds.fixedwidth.FixedWidthOptions
 import lombok.extern.slf4j.Slf4j
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.fixedwidth.FixedWidthOptions
 import org.apache.spark.sql.functions.{length, trim}
 import org.slf4j.LoggerFactory
-
-import scala.util.control.NonFatal
 
 @Slf4j
 object FixedWidthUtils {
   private val logger = LoggerFactory.getLogger(FixedWidthUtils.getClass)
+
   /**
    * Filter ignorable rows for fixedWidth dataset (lines empty and starting with `comment`).
    * This is currently being used in fixedWidth schema inference.
@@ -80,35 +77,6 @@ object FixedWidthUtils {
   }
 
   /**
-   * Helper method that converts string representation of a character to actual character.
-   * It handles some Java escaped strings and throws exception if given string is longer than one
-   * character.
-   */
-  @throws[IllegalArgumentException]
-  def toChar(str: String): Char = {
-    (str: Seq[Char]) match {
-      case Seq() => throw new IllegalArgumentException("Delimiter cannot be empty string")
-      case Seq('\\') => throw new IllegalArgumentException("Single backslash is prohibited." +
-        " It has special meaning as beginning of an escape sequence." +
-        " To get the backslash character, pass a string with two backslashes as the delimiter.")
-      case Seq(c) => c
-      case Seq('\\', 't') => '\t'
-      case Seq('\\', 'r') => '\r'
-      case Seq('\\', 'b') => '\b'
-      case Seq('\\', 'f') => '\f'
-      // In case user changes quote char and uses \" as delimiter in options
-      case Seq('\\', '\"') => '\"'
-      case Seq('\\', '\'') => '\''
-      case Seq('\\', '\\') => '\\'
-      case _ if str == """\u0000""" => '\u0000'
-      case Seq('\\', _) =>
-        throw new IllegalArgumentException(s"Unsupported special character for delimiter: $str")
-      case _ =>
-        throw new IllegalArgumentException(s"Delimiter cannot be more than one character: $str")
-    }
-  }
-
-  /**
    * Sample fixedWidth dataset as configured by `samplingRatio`.
    */
   def sample(ds: Dataset[String], options: FixedWidthOptions): Dataset[String] = {
@@ -132,21 +100,5 @@ object FixedWidthUtils {
     } else {
       ds.sample(withReplacement = false, options.samplingRatio, 1)
     }
-  }
-
-  def tryOrIOException[T](block: => T): T = {
-    try {
-      block
-    } catch {
-      case e: IOException =>
-        logError("IOException encountered", e)
-        throw e
-      case NonFatal(e) =>
-        logError("Exception encountered", e)
-        throw new IOException(e)
-    }
-  }
-  def logError(msg: => String, throwable: Throwable) {
-    logger.error(msg, throwable)
   }
 }

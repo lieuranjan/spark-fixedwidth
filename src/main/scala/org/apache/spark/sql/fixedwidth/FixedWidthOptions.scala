@@ -15,19 +15,18 @@
  * limitations under the License.
  */
 
-package in.gogoi.ds.fixedwidth
+package org.apache.spark.sql.fixedwidth
 
 import java.nio.charset.StandardCharsets
 import java.util.{Locale, TimeZone}
 
-import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.google.gson.Gson
 import com.univocity.parsers.fixed.{FieldAlignment, FixedWidthFields, FixedWidthParserSettings, FixedWidthWriterSettings}
-import in.gogoi.ds.fixedwidth.util.{FixedWidthField, FixedWidthUtils}
 import org.apache.commons.lang3.time.FastDateFormat
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util._
-import org.codehaus.jackson.map.ObjectMapper
+import org.apache.spark.sql.execution.datasources.csv.CSVUtils
+import org.apache.spark.sql.fixedwidth.utils.FixedWidthField
 
 class FixedWidthOptions(
                          @transient val parameters: CaseInsensitiveMap[String],
@@ -89,7 +88,7 @@ class FixedWidthOptions(
   val fieldLengths = parameters.getOrElse("fieldLengths", "")
   val fieldSchema = parameters.getOrElse("fieldSchema", "")
 
-  val padding = FixedWidthUtils.toChar(parameters.getOrElse("padding", " "))
+  val padding = CSVUtils.toChar(parameters.getOrElse("padding", " "))
   val parseMode: ParseMode =
     parameters.get("mode").map(ParseMode.fromString).getOrElse(PermissiveMode)
   val charset = parameters.getOrElse("encoding",
@@ -132,7 +131,6 @@ class FixedWidthOptions(
     FastDateFormat.getInstance(
       parameters.getOrElse("timestampFormat", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"), timeZone, Locale.US)
 
-  //TODO multiLine not supported yet
   val multiLine = parameters.get("multiLine").map(_.toBoolean).getOrElse(false)
   val maxColumns = getInt("maxColumns", 20480)
   val maxCharsPerColumn = getInt("maxCharsPerColumn", -1)
@@ -212,13 +210,15 @@ class FixedWidthOptions(
     } else if (!fieldSchema.isEmpty) {
       val gson = new Gson()
       val fields: Array[FixedWidthField] = gson.fromJson(fieldSchema, classOf[Array[FixedWidthField]])
-      fields.foreach(field=>{
-        var length=field.length
-        var alignment = FieldAlignment.values().
-        if(length==0){
-          fixedWidthFields.addField(field.name,field.startPosition, field.endPosition)
-        }else{
-          fixedWidthFields.addField(field.name,field.length)
+      fields.foreach(field => {
+        var length = field.length
+
+        //TODO
+        //var alignment = FieldAlignment.values().
+        if (length == 0) {
+          fixedWidthFields.addField(field.name, field.startPosition, field.endPosition)
+        } else {
+          fixedWidthFields.addField(field.name, field.length)
         }
 
       })

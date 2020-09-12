@@ -15,22 +15,22 @@
  * limitations under the License.
  */
 
-package in.gogoi.ds.fixedwidth
+package org.apache.spark.sql.fixedwidth
 
 import java.nio.charset.Charset
 
-import in.gogoi.ds.fixedwidth.univocity.{UnivocityParser, UnivocityWriter}
-import in.gogoi.ds.fixedwidth.util.{CustomSerializableConfiguration, SparkAnalysisException}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce._
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.CompressionCodecs
 import org.apache.spark.sql.execution.datasources._
+import org.apache.spark.sql.fixedwidth.univocity.{UnivocityParser, UnivocityWriter}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
+import org.apache.spark.util.SerializableConfiguration
 
 /**
  * Provides access to FixedWidth data from pure SQL statements.
@@ -100,7 +100,7 @@ class FixedWidthFileFormat extends TextBasedFileFormat with DataSourceRegister {
                             options: Map[String, String],
                             hadoopConf: Configuration): (PartitionedFile) => Iterator[InternalRow] = {
     val broadcastedHadoopConf =
-      sparkSession.sparkContext.broadcast(new CustomSerializableConfiguration(hadoopConf))
+      sparkSession.sparkContext.broadcast(new SerializableConfiguration(hadoopConf))
 
     val parsedOptions = new FixedWidthOptions(
       options,
@@ -108,20 +108,18 @@ class FixedWidthFileFormat extends TextBasedFileFormat with DataSourceRegister {
       sparkSession.sessionState.conf.sessionLocalTimeZone,
       sparkSession.sessionState.conf.columnNameOfCorruptRecord)
 
-    // Check a field requirement for corrupt records here to throw an exception in a driver side
-    //find index of corrupted column, hope corrupt field is always there
-    val corruptedFieldIndex = dataSchema.fieldNames.indexOf(parsedOptions.columnNameOfCorruptRecord)
-    if(corruptedFieldIndex != -1) {
-      val f = dataSchema(corruptedFieldIndex)
+    /// Check a field requirement for corrupt records here to throw an exception in a driver side
+    dataSchema.getFieldIndex(parsedOptions.columnNameOfCorruptRecord).foreach { corruptFieldIndex =>
+      val f = dataSchema(corruptFieldIndex)
       if (f.dataType != StringType || !f.nullable) {
-        throw new SparkAnalysisException(
+        throw new AnalysisException(
           "The field for corrupt records must be string type and nullable")
       }
     }
 
     if (requiredSchema.length == 1 &&
       requiredSchema.head.name == parsedOptions.columnNameOfCorruptRecord) {
-      throw new SparkAnalysisException(
+      throw new AnalysisException(
         "Since Spark 2.3, the queries from raw JSON/CSV files are disallowed when the\n" +
           "referenced columns only include the internal corrupt record column\n" +
           s"(named _corrupt_record by default). For example:\n" +
@@ -159,14 +157,8 @@ class FixedWidthFileFormat extends TextBasedFileFormat with DataSourceRegister {
   override def equals(other: Any): Boolean = other.isInstanceOf[FixedWidthFileFormat]
 
   override def supportDataType(dataType: DataType, isReadPath: Boolean): Boolean = dataType match {
-    //atomic types
-    case _: BinaryType => true
-    case _: BooleanType => true
-    case _: DateType => true
-    case _: StringType => true
-    case _: TimestampType => true
-    //TODO User defined types are not supported yet
-    //case udt: UserDefinedType[_] => supportDataType(udt.sqlType, isReadPath)
+    case _: AtomicType => true
+    case udt: UserDefinedType[_] => supportDataType(udt.sqlType, isReadPath)
     case _ => false
   }
 

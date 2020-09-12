@@ -1,4 +1,5 @@
-package in.gogoi.ds.fixedwidth.util
+package org.apache.spark.sql.fixedwidth.utils
+
 case class FixedWidthField(
                             name: String,
                             length: Int,
