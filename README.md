@@ -26,6 +26,7 @@ Note: Most of the code are copied from Spark CSV parser
 * `maxColumns` (default 20480): defines a hard limit of how many columns a record can have.
 * `maxCharsPerColumn` (default -1): defines the maximum number of characters allowed for any given value being read. By default, it is -1 meaning unlimited length
 * `extension` (default txt) : define output file extension to use while writing
+* `multiline` (default false) : parse one record, which may span multiple lines.
 * `mode` (default PERMISSIVE): allows a mode for dealing with corrupt records during parsing. It supports the following case-insensitive modes.
 * * `PERMISSIVE` : when it meets a corrupted record, puts the malformed string into a field configured by columnNameOfCorruptRecord, and sets other fields to null. To keep corrupt records, an user can set a string type field named columnNameOfCorruptRecord in an user-defined schema. If a schema does not have the field, it drops corrupt records during parsing. A record with less/more tokens than schema is not a corrupted record to FixedWidth. When it meets a record having fewer tokens than the length of the schema, sets null to extra fields. When the record has more tokens than the length of the schema, it drops extra tokens.
 * * `DROPMALFORMED` : ignores the whole corrupted records.
