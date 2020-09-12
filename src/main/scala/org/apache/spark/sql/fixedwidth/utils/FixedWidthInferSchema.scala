@@ -10,6 +10,10 @@ import org.apache.spark.sql.types._
 
 import scala.util.control.Exception.allCatch
 
+/**
+ * @author lieuranjan
+ *         Created on 12/9/20
+ */
 private[fixedwidth] object FixedWidthInferSchema {
 
   def infer(
@@ -17,8 +21,8 @@ private[fixedwidth] object FixedWidthInferSchema {
              header: Array[String],
              options: FixedWidthOptions): StructType = {
     val fields = if (options.inferSchemaFlag) {
-      val startType: Array[DataType] = Array.fill[DataType](header.length)(NullType)
-      val rootTypes: Array[DataType] =
+      val startType = Array.fill[DataType](header.length)(NullType)
+      val rootTypes =
         tokenRDD.aggregate(startType)(inferRowType(options), mergeRowTypes)
 
       header.zip(rootTypes).map { case (thisHeader, rootType) =>
@@ -37,7 +41,7 @@ private[fixedwidth] object FixedWidthInferSchema {
   }
 
   private def inferRowType(options: FixedWidthOptions)
-                          (rowSoFar: Array[DataType], next: Array[String]): Array[DataType] = {
+                          (rowSoFar: Array[DataType], next: Array[String]) = {
     var i = 0
     while (i < math.min(rowSoFar.length, next.length)) { // May have columns on right missing.
       rowSoFar(i) = inferField(rowSoFar(i), next(i), options)
@@ -46,58 +50,36 @@ private[fixedwidth] object FixedWidthInferSchema {
     rowSoFar
   }
 
-  def mergeRowTypes(first: Array[DataType], second: Array[DataType]): Array[DataType] = {
-    first.zipAll(second, NullType, NullType).map { case (a, b) =>
-      TypeCoercion.findTightestCommonType(a, b).getOrElse(NullType)
-    }
+  def mergeRowTypes(first: Array[DataType], second: Array[DataType]): Array[DataType] = first.zipAll(second, NullType, NullType).map { case (a, b) =>
+    TypeCoercion.findTightestCommonType(a, b).getOrElse(NullType)
   }
 
   /**
    * Infer type of string field. Given known type Double, and a string "1", there is no
    * point checking if it is an Int, as the final type must be Double or higher.
    */
-  def inferField(typeSoFar: DataType, field: String, options: FixedWidthOptions): DataType = {
-    if (field == null || field.isEmpty || field == options.nullValue) {
-      typeSoFar
-    } else {
-      typeSoFar match {
-        case NullType => tryParseInteger(field, options)
-        case IntegerType => tryParseInteger(field, options)
-        case LongType => tryParseLong(field, options)
-        case _: DecimalType =>
-          // DecimalTypes have different precisions and scales, so we try to find the common type.
-          TypeCoercion.findTightestCommonType(typeSoFar, tryParseDecimal(field, options)).getOrElse(StringType)
-        case DoubleType => tryParseDouble(field, options)
-        case TimestampType => tryParseTimestamp(field, options)
-        case BooleanType => tryParseBoolean(field, options)
-        case StringType => StringType
-        case other: DataType =>
-          throw new UnsupportedOperationException(s"Unexpected data type $other")
-      }
+  def inferField(typeSoFar: DataType, field: String, options: FixedWidthOptions): DataType = if (field == null || field.isEmpty || field == options.nullValue) typeSoFar else typeSoFar match {
+      case NullType => tryParseInteger(field, options)
+      case IntegerType => tryParseInteger(field, options)
+      case LongType => tryParseLong(field, options)
+      case _: DecimalType =>
+        // DecimalTypes have different precisions and scales, so we try to find the common type.
+        TypeCoercion.findTightestCommonType(typeSoFar, tryParseDecimal(field, options)).getOrElse(StringType)
+      case DoubleType => tryParseDouble(field, options)
+      case TimestampType => tryParseTimestamp(field, options)
+      case BooleanType => tryParseBoolean(field, options)
+      case StringType => StringType
+      case other: DataType =>
+        throw new UnsupportedOperationException(s"Unexpected data type $other")
     }
-  }
 
-  private def isInfOrNan(field: String, options: FixedWidthOptions): Boolean = {
-    field == options.nanValue || field == options.negativeInf || field == options.positiveInf
-  }
+  private def isInfOrNan(field: String, options: FixedWidthOptions) = field == options.nanValue || field == options.negativeInf || field == options.positiveInf
 
-  private def tryParseInteger(field: String, options: FixedWidthOptions): DataType = {
-    if ((allCatch opt field.toInt).isDefined) {
-      IntegerType
-    } else {
-      tryParseLong(field, options)
-    }
-  }
+  private def tryParseInteger(field: String, options: FixedWidthOptions) = if ((allCatch opt field.toInt).isDefined) IntegerType else tryParseLong(field, options)
 
-  private def tryParseLong(field: String, options: FixedWidthOptions): DataType = {
-    if ((allCatch opt field.toLong).isDefined) {
-      LongType
-    } else {
-      tryParseDecimal(field, options)
-    }
-  }
+  private def tryParseLong(field: String, options: FixedWidthOptions) = if ((allCatch opt field.toLong).isDefined) LongType else tryParseDecimal(field, options)
 
-  private def tryParseDecimal(field: String, options: FixedWidthOptions): DataType = {
+  private def tryParseDecimal(field: String, options: FixedWidthOptions) = {
     val decimalTry = allCatch opt {
       // `BigDecimal` conversion can fail when the `field` is not a form of number.
       val bigDecimal = new BigDecimal(field)
@@ -108,49 +90,29 @@ private[fixedwidth] object FixedWidthInferSchema {
         //   1. The precision is bigger than 38.
         //   2. scale is bigger than precision.
         DecimalType(bigDecimal.precision, bigDecimal.scale)
-      } else {
-        tryParseDouble(field, options)
-      }
+      } else tryParseDouble(field, options)
     }
     decimalTry.getOrElse(tryParseDouble(field, options))
   }
 
-  private def tryParseDouble(field: String, options: FixedWidthOptions): DataType = {
-    if ((allCatch opt field.toDouble).isDefined || isInfOrNan(field, options)) {
-      DoubleType
-    } else {
-      tryParseTimestamp(field, options)
-    }
-  }
+  private def tryParseDouble(field: String, options: FixedWidthOptions) = if ((allCatch opt field.toDouble).isDefined || isInfOrNan(field, options)) DoubleType else tryParseTimestamp(field, options)
 
-  private def tryParseTimestamp(field: String, options: FixedWidthOptions): DataType = {
+  private def tryParseTimestamp(field: String, options: FixedWidthOptions) = {
     // This case infers a custom `dataFormat` is set.
-    if ((allCatch opt options.timestampFormat.parse(field)).isDefined) {
-      TimestampType
-    } else if ((allCatch opt DateTimeUtils.stringToTime(field)).isDefined) {
+    if ((allCatch opt options.timestampFormat.parse(field)).isDefined) TimestampType else if ((allCatch opt DateTimeUtils.stringToTime(field)).isDefined) {
       // We keep this for backwards compatibility.
       TimestampType
-    } else {
-      tryParseBoolean(field, options)
-    }
+    } else tryParseBoolean(field, options)
   }
 
-  private def tryParseBoolean(field: String, options: FixedWidthOptions): DataType = {
-    if ((allCatch opt field.toBoolean).isDefined) {
-      BooleanType
-    } else {
-      stringType()
-    }
-  }
+  private def tryParseBoolean(field: String, options: FixedWidthOptions) = if ((allCatch opt field.toBoolean).isDefined) BooleanType else stringType()
 
   // Defining a function to return the StringType constant is necessary in order to work around
   // a Scala compiler issue which leads to runtime incompatibilities with certain Spark versions;
   // see issue #128 for more details.
-  private def stringType(): DataType = {
-    StringType
-  }
+  private def stringType() = StringType
 
-  private val numericPrecedence: IndexedSeq[DataType] = TypeCoercion.numericPrecedence
+  private val numericPrecedence = TypeCoercion.numericPrecedence
 
   /**
    * Copied from internal Spark api
@@ -191,9 +153,7 @@ private[fixedwidth] object FixedWidthInferSchema {
       if (range + scale > 38) {
         // DecimalType can't support precision > 38
         Some(DoubleType)
-      } else {
-        Some(DecimalType(range + scale, scale))
-      }
+      } else Some(DecimalType(range + scale, scale))
 
     case _ => None
   }

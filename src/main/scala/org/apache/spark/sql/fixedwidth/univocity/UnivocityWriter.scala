@@ -26,6 +26,10 @@ import org.apache.spark.sql.catalyst.util.DateTimeUtils.TimestampParser
 import org.apache.spark.sql.fixedwidth.FixedWidthOptions
 import org.apache.spark.sql.types._
 
+/**
+ * @author lieuranjan
+ * Created on 12/9/20
+ */
 private[fixedwidth] class UnivocityWriter(
                                            schema: StructType,
                                            writer: Writer,
@@ -40,12 +44,12 @@ private[fixedwidth] class UnivocityWriter(
   private type ValueConverter = (InternalRow, Int) => String
 
   // `ValueConverter`s for all values in the fields of the schema
-  private val valueConverters: Array[ValueConverter] =
+  private val valueConverters =
     schema.map(_.dataType).map(makeConverter).toArray
 
   @transient private lazy val timestampParser = new TimestampParser(options.timestampFormat)
 
-  private def makeConverter(dataType: DataType): ValueConverter = dataType match {
+  private def makeConverter(dataType: DataType) = dataType match {
     case DateType =>
       (row: InternalRow, ordinal: Int) =>
         options.dateFormat.format(DateTimeUtils.toJavaDate(row.getInt(ordinal)))
@@ -60,15 +64,11 @@ private[fixedwidth] class UnivocityWriter(
         row.get(ordinal, dt).toString
   }
 
-  private def convertRow(row: InternalRow): Seq[String] = {
+  private def convertRow(row: InternalRow) = {
     var i = 0
     val values = new Array[String](row.numFields)
     while (i < row.numFields) {
-      if (!row.isNullAt(i)) {
-        values(i) = valueConverters(i).apply(row, i)
-      } else {
-        values(i) = options.nullValue
-      }
+      if (!row.isNullAt(i)) values(i) = valueConverters(i).apply(row, i) else values(i) = options.nullValue
       i += 1
     }
     values
@@ -78,9 +78,7 @@ private[fixedwidth] class UnivocityWriter(
    * Writes a single InternalRow to fixedwidth using Univocity.
    */
   def write(row: InternalRow): Unit = {
-    if (printHeader) {
-      gen.writeHeaders()
-    }
+    if (printHeader) gen.writeHeaders()
     gen.writeRow(convertRow(row): _*)
     printHeader = false
   }

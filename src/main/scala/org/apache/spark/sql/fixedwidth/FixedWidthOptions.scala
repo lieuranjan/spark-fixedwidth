@@ -28,6 +28,10 @@ import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.datasources.csv.CSVUtils
 import org.apache.spark.sql.fixedwidth.utils.FixedWidthField
 
+/**
+ * @author lieuranjan
+ *         Created on 12/9/20
+ */
 class FixedWidthOptions(
                          @transient val parameters: CaseInsensitiveMap[String],
                          val columnPruning: Boolean,
@@ -39,15 +43,13 @@ class FixedWidthOptions(
             parameters: Map[String, String],
             columnPruning: Boolean,
             defaultTimeZoneId: String,
-            defaultColumnNameOfCorruptRecord: String = "") = {
-    this(
-      CaseInsensitiveMap(parameters),
-      columnPruning,
-      defaultTimeZoneId,
-      defaultColumnNameOfCorruptRecord)
-  }
+            defaultColumnNameOfCorruptRecord: String = "") = this(
+              CaseInsensitiveMap(parameters),
+              columnPruning,
+              defaultTimeZoneId,
+              defaultColumnNameOfCorruptRecord)
 
-  private def getChar(paramName: String, default: Char): Char = {
+  private def getChar(paramName: String, default: Char) = {
     val paramValue = parameters.get(paramName)
     paramValue match {
       case None => default
@@ -58,31 +60,21 @@ class FixedWidthOptions(
     }
   }
 
-  private def getInt(paramName: String, default: Int): Int = {
+  private def getInt(paramName: String, default: Int) = {
     val paramValue = parameters.get(paramName)
     paramValue match {
       case None => default
       case Some(null) => default
-      case Some(value) => try {
-        value.toInt
-      } catch {
+      case Some(value) => try value.toInt catch {
         case e: NumberFormatException =>
           throw new RuntimeException(s"$paramName should be an integer. Found $value")
       }
     }
   }
 
-  private def getBool(paramName: String, default: Boolean = false): Boolean = {
+  private def getBool(paramName: String, default: Boolean = false) = {
     val param = parameters.getOrElse(paramName, default.toString)
-    if (param == null) {
-      default
-    } else if (param.toLowerCase(Locale.ROOT) == "true") {
-      true
-    } else if (param.toLowerCase(Locale.ROOT) == "false") {
-      false
-    } else {
-      throw new Exception(s"$paramName flag can be true or false")
-    }
+    if (param == null) default else if (param.toLowerCase(Locale.ROOT) == "true") true else if (param.toLowerCase(Locale.ROOT) == "false") false else throw new Exception(s"$paramName flag can be true or false")
   }
 
   val fieldLengths = parameters.getOrElse("fieldLengths", "")
@@ -175,9 +167,9 @@ class FixedWidthOptions(
     writerSettings.setNullValue(nullValue)
     writerSettings.setEmptyValue(emptyValueInWrite)
     writerSettings.setSkipEmptyLines(true)
-    writerSettings.setHeaderWritingEnabled(headerFlag);
-    writerSettings.setUseDefaultPaddingForHeaders(true);
-    writerSettings.setDefaultAlignmentForHeaders(FieldAlignment.LEFT);
+    writerSettings.setHeaderWritingEnabled(headerFlag)
+    writerSettings.setUseDefaultPaddingForHeaders(true)
+    writerSettings.setDefaultAlignmentForHeaders(FieldAlignment.LEFT)
     writerSettings
   }
 
@@ -201,7 +193,7 @@ class FixedWidthOptions(
   }
 
   //creating FixedWidthFields from lengths or FieldSchema
-  private def getFixedWidthFields(length: String, fieldSchema: String): FixedWidthFields = {
+  private def getFixedWidthFields(length: String, fieldSchema: String) = {
     val fixedWidthFields = new FixedWidthFields()
     if (!length.isEmpty) {
       val lengths = length.split(",").map(r => r.toInt)
@@ -209,23 +201,17 @@ class FixedWidthOptions(
       fixedWidthFields
     } else if (!fieldSchema.isEmpty) {
       val gson = new Gson()
-      val fields: Array[FixedWidthField] = gson.fromJson(fieldSchema, classOf[Array[FixedWidthField]])
+      val fields = gson.fromJson(fieldSchema, classOf[Array[FixedWidthField]])
       fields.foreach(field => {
         var length = field.length
 
         //TODO
         //var alignment = FieldAlignment.values().
-        if (length == 0) {
-          fixedWidthFields.addField(field.name, field.startPosition, field.endPosition)
-        } else {
-          fixedWidthFields.addField(field.name, field.length)
-        }
+        if (length == 0) fixedWidthFields.addField(field.name, field.startPosition, field.endPosition) else fixedWidthFields.addField(field.name, field.length)
 
       })
       fixedWidthFields
-    } else {
-      throw new IllegalArgumentException("Expected fieldLength or fieldSchema to parse/write fiexed width file")
-    }
+    } else throw new IllegalArgumentException("Expected fieldLength or fieldSchema to parse/write fiexed width file")
 
   }
 }

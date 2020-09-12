@@ -33,6 +33,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.util.SerializableConfiguration
 
 /**
+ * @author lieuranjan
+ *         Created on 12/9/20
+ */
+/**
  * Provides access to FixedWidth data from pure SQL statements.
  */
 class FixedWidthFileFormat extends TextBasedFileFormat with DataSourceRegister {

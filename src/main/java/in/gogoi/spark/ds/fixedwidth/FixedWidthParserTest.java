@@ -9,7 +9,10 @@ import org.apache.spark.sql.SparkSession;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
-
+/**
+ * @author lieuranjan
+ * Created on 12/9/20
+ */
 public class FixedWidthParserTest {
     public static void main(String[] args) {
         FixedWidthFields fixedWidthFields = new FixedWidthFields();

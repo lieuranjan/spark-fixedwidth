@@ -40,6 +40,10 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Dataset, Encoders, SparkSession}
 
 /**
+ * @author lieuranjan
+ *         Created on 12/9/20
+ */
+/**
  * Common functions for parsing FixedWidth files
  */
 abstract class FixedWidthDataSource extends Serializable {

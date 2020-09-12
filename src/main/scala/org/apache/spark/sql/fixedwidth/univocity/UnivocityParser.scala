@@ -19,6 +19,10 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
+ * @author lieuranjan
+ * Created on 12/9/20
+ */
+/**
  * Constructs a parser for a given schema that translates FixedWidth data to an [[InternalRow]].
  *
  * @param dataSchema     The FixedWidth data schema that is specified by the user, or inferred from underlying
