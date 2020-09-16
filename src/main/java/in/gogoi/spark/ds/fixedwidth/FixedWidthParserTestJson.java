@@ -1,21 +1,17 @@
 package in.gogoi.spark.ds.fixedwidth;
 
-import com.univocity.parsers.fixed.FieldAlignment;
-import com.univocity.parsers.fixed.FixedWidthFields;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
-
-import java.util.Arrays;
-import java.util.stream.Collectors;
 /**
  * @author lieuranjan
  * Created on 12/9/20
  */
 public class FixedWidthParserTestJson {
     public static void main(String[] args) {
-        FixedWidthFields fixedWidthFields = new FixedWidthFields();
+        /*FixedWidthFields fixedWidthFields = new FixedWidthFields();
         fixedWidthFields.addField("seq", 4, FieldAlignment.RIGHT, '0');
         fixedWidthFields.addField("name_first", 10, FieldAlignment.LEFT);
         fixedWidthFields.addField("name_last", 10, FieldAlignment.LEFT);
@@ -26,30 +22,38 @@ public class FixedWidthParserTestJson {
         fixedWidthFields.addField("zip", 10, FieldAlignment.CENTER);
         fixedWidthFields.addField("dollar", 20, FieldAlignment.RIGHT);
         fixedWidthFields.addField("pick", 6, FieldAlignment.LEFT);
-        fixedWidthFields.addField("date", 10, FieldAlignment.CENTER);
-        fixedWidthFields.addField("float", 30, FieldAlignment.RIGHT, '0');
-        fixedWidthFields.addField("credt_card", 30, FieldAlignment.RIGHT, '0');
-        fixedWidthFields.addField("natural", 30, FieldAlignment.RIGHT, '0');
+        fixedWidthFields.addField("date", 10, FieldAlignment.CENTER);*/
+        val json= "[{\"name\":\"seq\",\"length\":4,\"alignment\":\"left\"}," +
+                "{\"name\":\"name_first\",\"length\":10}," +
+                "{\"name\":\"name_last\",\"length\":10}," +
+                "{\"name\":\"age\",\"length\":2}," +
+                "{\"name\":\"street\",\"length\":20}," +
+                "{\"name\":\"city\",\"length\":10}," +
+                "{\"name\":\"state\",\"length\":10}," +
+                "{\"name\":\"dollar\",\"length\":20}," +
+                "{\"name\":\"pick\",\"length\":6}," +
+                "{\"name\":\"date\",\"length\":10}" +
+                "]\"";
 
-        String lengths=String.join(",", Arrays.stream(fixedWidthFields.getFieldLengths()).mapToObj(x->String.valueOf(x)).collect(Collectors.toList()));
-        System.out.println(lengths);
+       // String lengths=String.join(",", Arrays.stream(fixedWidthFields.getFieldLengths()).mapToObj(x->String.valueOf(x)).collect(Collectors.toList()));
+       // System.out.println(lengths);
         SparkSession sparkSession = SparkSession.builder().appName("Test").master("local").getOrCreate();
         Dataset<Row> input=sparkSession
                 .read()
-                .format("org.apache.spark.sql.fixedwidth")
+                .format("org.apache.spark.sql.fixedwidth.FixedWidthFileFormat")
                 //.option("padding"," ")
-                .option("fieldLengths",lengths)
-                .option("header",true)
+                .option("fieldSchema",json)
+                .option("header",false)
                 .option("ignoreLeadingWhiteSpaceInRead",true)
                 .option("ignoreTrailingWhiteSpaceInRead",true)
-                .load("data/input/fixed_width.dat");
+                .load("src/test/resources/test-data/sample_fixed_width_file.txt");
         input.show();
 
         input.write()
-                .option("header",true)
-                .option("fieldLengths",lengths)
+                .option("header",false)
+                .option("fieldSchema",json)
                 .option("extension",".DAT")
-                .format("in.gogoi.ds.fixedwidth.FixedWidthFileFormat")
+                .format("org.apache.spark.sql.fixedwidth.FixedWidthFileFormat")
                 .mode(SaveMode.Overwrite)
                 .save("data/fixed/dat");
 

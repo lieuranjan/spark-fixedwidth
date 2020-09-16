@@ -1,32 +1,14 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.spark.sql.fixedwidth
 
 import java.nio.charset.StandardCharsets
 import java.util.{Locale, TimeZone}
-
-import com.google.gson.Gson
 import com.univocity.parsers.fixed.{FieldAlignment, FixedWidthFields, FixedWidthParserSettings, FixedWidthWriterSettings}
 import org.apache.commons.lang3.time.FastDateFormat
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.datasources.csv.CSVUtils
-import org.apache.spark.sql.fixedwidth.utils.FixedWidthField
+import org.json4s.DefaultFormats
+import org.json4s.jackson.Serialization.read
 
 /**
  * @author lieuranjan
@@ -44,10 +26,10 @@ class FixedWidthOptions(
             columnPruning: Boolean,
             defaultTimeZoneId: String,
             defaultColumnNameOfCorruptRecord: String = "") = this(
-              CaseInsensitiveMap(parameters),
-              columnPruning,
-              defaultTimeZoneId,
-              defaultColumnNameOfCorruptRecord)
+    CaseInsensitiveMap(parameters),
+    columnPruning,
+    defaultTimeZoneId,
+    defaultColumnNameOfCorruptRecord)
 
   private def getChar(paramName: String, default: Char) = {
     val paramValue = parameters.get(paramName)
@@ -187,31 +169,59 @@ class FixedWidthOptions(
     settings.setNullValue(nullValue)
     settings.setMaxCharsPerColumn(maxCharsPerColumn)
     settings.setSkipEmptyLines(true)
+    settings.setLineSeparatorDetectionEnabled(true)
     //columns
-    //settings.set
     settings
   }
 
+  case class Field(
+                    name: Option[String],
+                    length: Option[Int],
+                    startPosition: Option[Int],
+                    endPosition: Option[Int],
+                    padding: Option[String],
+                    alignment: Option[String]
+                  )
+
   //creating FixedWidthFields from lengths or FieldSchema
-  private def getFixedWidthFields(length: String, fieldSchema: String) = {
+  private def getFixedWidthFields(lengths: String, fieldSchema: String) = {
     val fixedWidthFields = new FixedWidthFields()
-    if (!length.isEmpty) {
-      val lengths = length.split(",").map(r => r.toInt)
-      lengths.foreach(l => fixedWidthFields.addField(l))
+    if (!lengths.isEmpty) {
+      val lengthArray = lengths.split(",").map(r => r.toInt)
+      lengthArray.foreach(l => fixedWidthFields.addField(l))
       fixedWidthFields
     } else if (!fieldSchema.isEmpty) {
-      val gson = new Gson()
-      val fields = gson.fromJson(fieldSchema, classOf[Array[FixedWidthField]])
+      implicit val formats = DefaultFormats
+      println(fieldSchema)
+      val fields = read[List[Field]](fieldSchema)
+      println(fields)
       fields.foreach(field => {
-        var length = field.length
-
-        //TODO
-        //var alignment = FieldAlignment.values().
-        if (length == 0) fixedWidthFields.addField(field.name, field.startPosition, field.endPosition) else fixedWidthFields.addField(field.name, field.length)
-
+        if (field.length.isEmpty) {
+          fixedWidthFields.addField(field.name.get, field.startPosition.get, field.endPosition.get, toFieldAlignment(field.alignment), getFieldPadding(field.padding))
+        } else {
+          fixedWidthFields.addField(field.name.get, field.length.get, toFieldAlignment(field.alignment), getFieldPadding(field.padding))
+        }
       })
       fixedWidthFields
-    } else throw new IllegalArgumentException("Expected fieldLength or fieldSchema to parse/write fiexed width file")
+    } else
+      throw new IllegalArgumentException("Expected fieldLength/fieldSchema to parse/write fixedwidth files")
+  }
 
+  private def toFieldAlignment(alignment: Option[String]): FieldAlignment = {
+    alignment.get match {
+      case "left" => FieldAlignment.LEFT
+      case "right" => FieldAlignment.RIGHT
+      case "center" => FieldAlignment.CENTER
+      case _ => FieldAlignment.LEFT
+    }
+  }
+
+  private def getFieldPadding(padding: Option[String]): Char = {
+    if (padding.get.isEmpty) {
+      '\u0000'
+    } else {
+      CSVUtils.toChar(padding.get)
+    }
   }
 }
+

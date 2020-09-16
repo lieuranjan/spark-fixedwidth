@@ -1,7 +1,6 @@
 package org.apache.spark.sql.fixedwidth.utils
 
 import java.math.BigDecimal
-
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.TypeCoercion
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
@@ -59,19 +58,19 @@ private[fixedwidth] object FixedWidthInferSchema {
    * point checking if it is an Int, as the final type must be Double or higher.
    */
   def inferField(typeSoFar: DataType, field: String, options: FixedWidthOptions): DataType = if (field == null || field.isEmpty || field == options.nullValue) typeSoFar else typeSoFar match {
-      case NullType => tryParseInteger(field, options)
-      case IntegerType => tryParseInteger(field, options)
-      case LongType => tryParseLong(field, options)
-      case _: DecimalType =>
-        // DecimalTypes have different precisions and scales, so we try to find the common type.
-        TypeCoercion.findTightestCommonType(typeSoFar, tryParseDecimal(field, options)).getOrElse(StringType)
-      case DoubleType => tryParseDouble(field, options)
-      case TimestampType => tryParseTimestamp(field, options)
-      case BooleanType => tryParseBoolean(field, options)
-      case StringType => StringType
-      case other: DataType =>
-        throw new UnsupportedOperationException(s"Unexpected data type $other")
-    }
+    case NullType => tryParseInteger(field, options)
+    case IntegerType => tryParseInteger(field, options)
+    case LongType => tryParseLong(field, options)
+    case _: DecimalType =>
+      // DecimalTypes have different precisions and scales, so we try to find the common type.
+      TypeCoercion.findTightestCommonType(typeSoFar, tryParseDecimal(field, options)).getOrElse(StringType)
+    case DoubleType => tryParseDouble(field, options)
+    case TimestampType => tryParseTimestamp(field, options)
+    case BooleanType => tryParseBoolean(field, options)
+    case StringType => StringType
+    case other: DataType =>
+      throw new UnsupportedOperationException(s"Unexpected data type $other")
+  }
 
   private def isInfOrNan(field: String, options: FixedWidthOptions) = field == options.nanValue || field == options.negativeInf || field == options.positiveInf
 

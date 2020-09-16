@@ -1,19 +1,15 @@
 package org.apache.spark.sql.fixedwidth.utils
 
-import lombok.extern.slf4j.Slf4j
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.fixedwidth.FixedWidthOptions
 import org.apache.spark.sql.functions.{length, trim}
-import org.slf4j.LoggerFactory
 
 /**
  * @author lieuranjan
  *         Created on 12/9/20
  */
-@Slf4j
 object FixedWidthUtils {
-  private val logger = LoggerFactory.getLogger(FixedWidthUtils.getClass)
 
   /**
    * Filter ignorable rows for fixedWidth dataset (lines empty and starting with `comment`).

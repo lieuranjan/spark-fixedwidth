@@ -1,0 +1,9 @@
+0001Ophelia   Reed      24Valuh Place         Corepene  NC           50579              $4697.48BLUE  03/16/2018
+0002Lula      Davidson  56Naew Grove          Muidinep  AL           02300              $5396.97YELLOW10/24/2036
+0003Irene     Griffin   61Idaipu Key          Kaccier   MT           30456              $4495.67WHITE 04/09/2062
+0004Herman    Howell    48Ficis Key           Tohashuk  HI           59319              $1229.89RED   05/26/1985
+0005Jayden    Walton    56Ofege Path          Ujfeus    TN           72437              $8601.93BLUE  05/21/1909
+0006Alfred    Hill      49Futpub Extension    Evvuute   OR           45446              $5014.76GREEN 04/12/2008
+0007Eula      Mullins   45Igdud Key           Ukruez    VT           92999              $9089.90RED   01/29/1949
+0008Caroline  Santiago  23Hifin Glen          Leunpi    KY           87817              $9344.83WHITE 02/06/1922
+0009Kenneth   Lane      43Zakna Pike          Nigzozelu MN           94248              $4733.00GREEN 01/27/2032

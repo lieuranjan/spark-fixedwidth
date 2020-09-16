@@ -28,7 +28,7 @@ import org.apache.spark.sql.types._
 
 /**
  * @author lieuranjan
- * Created on 12/9/20
+ *         Created on 12/9/20
  */
 private[fixedwidth] class UnivocityWriter(
                                            schema: StructType,
@@ -49,20 +49,20 @@ private[fixedwidth] class UnivocityWriter(
 
   @transient private lazy val timestampParser = new TimestampParser(options.timestampFormat)
 
-  private def makeConverter(dataType: DataType) = dataType match {
+  private def makeConverter(dataType: DataType): ValueConverter = dataType match {
     case DateType =>
       (row: InternalRow, ordinal: Int) =>
         options.dateFormat.format(DateTimeUtils.toJavaDate(row.getInt(ordinal)))
 
     case TimestampType =>
       (row: InternalRow, ordinal: Int) => timestampParser.format(row.getLong(ordinal))
-    //TODO UserDefinedType not supported
-    //case udt: UserDefinedType[_] => makeConverter(udt.sqlType)
+
+    case udt: UserDefinedType[_] => makeConverter(udt.sqlType)
 
     case dt: DataType =>
-      (row: InternalRow, ordinal: Int) =>
-        row.get(ordinal, dt).toString
+      (row: InternalRow, ordinal: Int) => row.get(ordinal, dt).toString
   }
+
 
   private def convertRow(row: InternalRow) = {
     var i = 0

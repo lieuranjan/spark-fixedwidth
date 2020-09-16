@@ -27,9 +27,6 @@ public class FixedWidthParserTest {
         fixedWidthFields.addField("dollar", 20, FieldAlignment.RIGHT);
         fixedWidthFields.addField("pick", 6, FieldAlignment.LEFT);
         fixedWidthFields.addField("date", 10, FieldAlignment.CENTER);
-        fixedWidthFields.addField("float", 30, FieldAlignment.RIGHT, '0');
-        fixedWidthFields.addField("credt_card", 30, FieldAlignment.RIGHT, '0');
-        fixedWidthFields.addField("natural", 30, FieldAlignment.RIGHT, '0');
 
         String lengths=String.join(",", Arrays.stream(fixedWidthFields.getFieldLengths()).mapToObj(x->String.valueOf(x)).collect(Collectors.toList()));
         System.out.println(lengths);
@@ -39,17 +36,18 @@ public class FixedWidthParserTest {
                 .format("org.apache.spark.sql.fixedwidth.FixedWidthFileFormat")
                 //.option("padding"," ")
                 .option("fieldLengths",lengths)
-                .option("header",true)
+                .option("header",false)
+                .option("multiline",false)
                 .option("ignoreLeadingWhiteSpaceInRead",true)
                 .option("ignoreTrailingWhiteSpaceInRead",true)
-                .load("data/input/fixed_width.dat");
+                .load("src/test/resources/test-data/sample_fixed_width_file.txt");
         input.show();
 
         input.write()
-                .option("header",true)
+                .option("header",false)
                 .option("fieldLengths",lengths)
                 .option("extension",".DAT")
-                .format("in.gogoi.ds.fixedwidth.FixedWidthFileFormat")
+                .format("org.apache.spark.sql.fixedwidth.FixedWidthFileFormat")
                 .mode(SaveMode.Overwrite)
                 .save("data/fixed/dat");
 
